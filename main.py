@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import itertools 
 from copy import deepcopy
 import time
-
+from numba import vectorize, njit
+import multiprocessing as mp
 
           
 # Initialize file path
@@ -31,6 +32,7 @@ T = 1000
 # Define Classes
 
 class Dorm:
+    
     
     def __init__(self, data, num_rooms):
         self.scoreMatrix = data
@@ -57,27 +59,31 @@ class Dorm:
         
         # If statement handles different inputs allowing for calculation of 
         # score from numpy array if desired.
-        room_score = 0
-        if type(room) == int:
-            print("int")
+        
+        # room_score = 0
+        if (type(room) == int or type(room) == np.int32):
+            #print("int")
             # Get all combinations of student pairs in the room
             combos = list(itertools.combinations(self.rooms.loc[room, "students"], 2))
-            print(combos)
+            #print(combos)
             # Loop through combinations, getting compatibility scores for each
-            # and adding it to the room score            
+            # and adding it to the room score
+            room_score = 0
             for combo in combos:
                 student1 = combo[0]
-                print(student1)
+                #print(student1)
                 student2 = combo[1]
-                print(student2)
-                print(self.scoreMatrix.loc[student1, student2])
+                #print(student2)
+                #print(self.scoreMatrix.loc[student1, student2])
                 room_score += self.scoreMatrix.loc[student1, student2]
                 #self.rooms.loc[room, "room_score"] += self.scoreMatrix.loc[student1, student2]            
-                print(room_score)
+                #print(room_score)
             self.rooms.loc[room, "room_score"] = room_score
-            print(self.rooms.loc[room, "room_score"])
+            #print(self.rooms.loc[room, "room_score"])
                 
-        elif type(room) == np.ndarray:            
+        elif type(room) == np.ndarray:
+            room_score = 0
+            #print("not int")
             # Get all combinations of student pairs in the room
             combos = list(itertools.combinations(room, 2))
             #print(combos)
@@ -88,18 +94,19 @@ class Dorm:
                 student1 = combo[0]
                 student2 = combo[1]            
                 room_score += self.scoreMatrix.loc[student1, student2]
-            return room_score
+        return room_score
         
     def calculateAllRooms(self):
         for index, room in self.rooms.iterrows():
             room.room_score = self.calculateRoomScore(index)
     
     def calculateDormScore(self):
-        #self.calculateAllRooms()
+        self.calculateAllRooms()
         self.totalScore = sum(self.rooms.room_score)
+        return sum(self.rooms.room_score)
     
     def getRandomRooms(self):
-        randomRooms = np.random.randint(1, self.num_rooms, size=2)
+        randomRooms = np.random.randint(1, self.num_rooms+1, size=2)
         if randomRooms[0] == randomRooms[1]:
             randomRooms = np.random.randint(1, self.num_rooms, size=2)
         return randomRooms
@@ -109,6 +116,7 @@ class Dorm:
         if randomStudents[0] == randomStudents[1]:
             randomStudents = np.random.randint(0,3, size=2)
         return randomStudents
+    
     
     def swapOne(self):
         ""
@@ -146,20 +154,24 @@ class Dorm:
         
         # Calculate net score change from room swap
         rm1_net = (temp1_score - room1_score)
+        #print(room1_score, rm1_net, temp1_score)
         rm2_net = (temp2_score - room2_score)
+        #print(room2_score, rm2_net, temp2_score)
         net_score = rm1_net + rm2_net
-        # print(net_score)
+        #print(net_score)
         
         
         if (net_score < 0):
             
-            print("Swapping Student", [student1], "from Room", randomRooms[0],
-                  "with Student", [student2], "from Room", randomRooms[1])
+            # print("Swapping Student", [student1], "from Room", randomRooms[0],
+            #       "with Student", [student2], "from Room", randomRooms[1])
+            print("swapping")
             self.rooms.loc[randomRooms[0], "students"][randomStudents[0]] = student2
             self.rooms.loc[randomRooms[1], "students"][randomStudents[1]] = student1
 
             self.rooms.loc[randomRooms[0], "room_score"] = self.calculateRoomScore(randomRooms[0])
             self.rooms.loc[randomRooms[1], "room_score"] = self.calculateRoomScore(randomRooms[1])
+            
             # self.rooms.loc[randomRooms[0], "room_score"] += rm1_net
             # self.rooms.loc[randomRooms[1], "room_score"] += rm2_net
             
@@ -169,18 +181,23 @@ class Dorm:
             # print("New RM2 score:", temp2_score)
             # print("Net Score:", net_score)
             
+            # print(self.calculateDormScore())
+            # print(sum(self.rooms.room_score))
+            
             self.successfulSwaps += 1
             self.consecutiveAttempts = 0
-            self.totalScore += net_score
+            self.totalScore = self.calculateDormScore()
+            #self.totalScore += net_score
             
         else:
             
             probability = np.exp(-(net_score/T))
             # print(probability)
             if (np.random.random() <= probability):
-                print("Net score higher, swapping Student", [student1], 
-                      "from Room", randomRooms[0], "with Student", [student2], 
-                      "from Room", randomRooms[1], "anyway")
+                print("swapping")
+                # print("Net score higher, swapping Student", [student1], 
+                #       "from Room", randomRooms[0], "with Student", [student2], 
+                #       "from Room", randomRooms[1], "anyway")
                 self.rooms.loc[randomRooms[0], "students"][randomStudents[0]] = student2
                 self.rooms.loc[randomRooms[1], "students"][randomStudents[1]] = student1
                 
@@ -198,13 +215,18 @@ class Dorm:
                 # print("Net Score:", net_score)
                 
                 
+                # print(self.calculateDormScore())
+                # print(sum(self.rooms.room_score))
+                
                 self.successfulSwaps += 1
                 self.consecutiveAttempts = 0
-                self.totalScore += net_score
+                self.totalScore = self.calculateDormScore()
+                #self.totalScore += net_score
             else:
-                print("No successful changes were made.")
+                print("not swapping")
                 self.attemptedSwaps += 1
                 self.consecutiveAttempts += 1
+                # print("No successful changes were made. Consecutive Attempts:", self.consecutiveAttempts)
 
         return net_score
     
@@ -251,8 +273,8 @@ class Dorm:
         
         if (net_score < 0):
             
-            print("Swapping Students", [student1, student2], "from Room", randomRooms[0], "with Students", 
-                      [student3, student4], "from Room", randomRooms[1])
+            # print("Swapping Students", [student1, student2], "from Room", randomRooms[0], "with Students", 
+            #           [student3, student4], "from Room", randomRooms[1])
             self.rooms.loc[randomRooms[0], "students"][0] = student3
             self.rooms.loc[randomRooms[0], "students"][1] = student4
             self.rooms.loc[randomRooms[1], "students"][2] = student1
@@ -270,25 +292,31 @@ class Dorm:
             # print("New RM2 score:", temp2_score)
             # print("Net Score:", net_score)
             
+            # print(self.calculateDormScore())
+            # print(sum(self.rooms.room_score))
             
             self.successfulSwaps += 1
             self.consecutiveAttempts = 0
-            self.totalScore += net_score
+            self.totalScore = self.calculateDormScore()
+            # self.totalScore += net_score
             
         else:
             
             probability = np.exp(-(net_score/T))
             #print(probability)
             if (np.random.random() <= probability):
-                print("Net score higher, swapping Students", [student1, 
-                      student2], "from Room", randomRooms[0], "with Students", 
-                      [student3, student4], "from Room", randomRooms[1], "anyway.")
+                # print("Net score higher, swapping Students", [student1, 
+                #       student2], "from Room", randomRooms[0], "with Students", 
+                #       [student3, student4], "from Room", randomRooms[1], "anyway.")
                 self.rooms.loc[randomRooms[0], "students"][0] = student3
                 self.rooms.loc[randomRooms[0], "students"][1] = student4
                 self.rooms.loc[randomRooms[1], "students"][2] = student1
                 self.rooms.loc[randomRooms[1], "students"][3] = student2
                 
+                # print(type(randomRooms[0]))
+                # print(self.calculateRoomScore(randomRooms[0]))
                 self.rooms.loc[randomRooms[0], "room_score"] = self.calculateRoomScore(randomRooms[0])
+                # print(self.rooms.loc[randomRooms[0], "room_score"])
                 self.rooms.loc[randomRooms[1], "room_score"] = self.calculateRoomScore(randomRooms[1])
                 
                 # self.rooms.loc[randomRooms[0], "room_score"] += rm1_net
@@ -300,41 +328,137 @@ class Dorm:
                 # print("New RM2 score:", temp2_score)
                 # print("Net Score:", net_score)
                 
+                # print(self.calculateDormScore())
+                # print(sum(self.rooms.room_score))
                 
                 self.successfulSwaps += 1
                 self.consecutiveAttempts = 0
-                self.totalScore += net_score
+                self.totalScore = self.calculateDormScore()
+                # self.totalScore += net_score
                 
             else:
                 
-                print("No successful changes were made.")
                 self.attemptedSwaps += 1
                 self.consecutiveAttempts += 1
+                # print("No successful changes were made. Consecutive Attempts:", self.consecutiveAttempts)
 
-        # return net_score
+    
+    def quickswapOne(self):
+        
+        randomRooms = self.getRandomRooms()
+        randomStudents = self.getRandomStudents()
+        # room1 = randomRooms[0]
+        # room2 = randomRooms[1]
+        # student1 = self.rooms.loc[randomRooms[0], "students"].values[randomStudents[0]]
+        # student2 = self.rooms.loc[randomRooms[1], "students"].values[randomStudents[1]]
+        
+        oldScore = self.calculateDormScore()
+        #print(oldScore)
+        #print(room1, student1, room2, student2)
+        
+        temp = self.rooms.loc[randomRooms[0], "students"][randomStudents[0]]
+        self.rooms.loc[randomRooms[0], "students"][randomStudents[0]] = self.rooms.loc[randomRooms[1], "students"].values[randomStudents[1]]
+        self.rooms.loc[randomRooms[1], "students"][randomStudents[1]] = temp
+        
+        newScore = self.calculateDormScore()
+        #print(newScore)
+        netScore = newScore - oldScore
+        print(netScore)
+        if (netScore < 0):
+            print("swapping")
+            # Keep Swap
+            self.successfulSwaps += 1
+            self.consecutiveAttempts = 0
+            self.totalScore = newScore        
+        
+        else:
+            
+            probability = np.exp(-(netScore/T))
+            # print(probability)
+            if (np.random.random() > probability):
+                print("swapping back")
+                # Revert Swap
+                temp = deepcopy(self.rooms.loc[randomRooms[0], "students"][randomStudents[0]])
+                self.rooms.loc[randomRooms[0], "students"][randomStudents[0]] = self.rooms.loc[randomRooms[1], "students"].values[randomStudents[1]]
+                self.rooms.loc[randomRooms[1], "students"][randomStudents[1]] = temp
+                
+                self.attemptedSwaps += 1
+                self.consecutiveAttempts += 1
+                self.totalScore = oldScore
+            else:
+                print("swapping")
+                
+    # def main(T, N):
+    #     i = 0
+    #     while True:    
+            
+    #         # Assuming some parameter N characterizing the size of the problem (people to
+    #         # assign to rooms) reduce T according to some schedule, every 10N successful
+    #         # changes or 100N attempted changes.
+    #         if (dorm.successfulSwaps % 2000 == 0 or dorm.attemptedSwaps % 20000 == 0):
+    #             T = N*T
+            
+    #         # Repeat until 20,000 attempts without successful change
+    #         if (dorm.consecutiveAttempts >= 20000):
+    #             print("Reached 20,000 attempts without a successful change")
+    #             break
+                
+    #         # Make Random change to current state x; call resulting state y and find
+    #         # score of state E(y).
+    #         # If E(y) < E(x), make the change. Otherwise, make the change anyway with
+    #         # probability np.exp^(-(dE/T))
+    #         change = np.random.randint(0,2)
+    #         if (change == 0):
+    #             dorm.swapOne()
+    #         else:
+    #             dorm.swapTwo()
+            
+    #         if (i % 100000 == 0):
+    #             print(i)
+            
+    #         i += 1
+        
+    #     executionTime = (time.time() - startTime)
+    #     print("Execution time:", str(np.round(executionTime, 3)), "seconds \n")
+        
 
-dorm = Dorm(data, 50)
-dorm.assignRooms()
-
-
-#%%
-dorm.swapOne()
-
-
-#%%
-dorm.swapTwo()
 
 
 #%%
 
 startTime = time.time()
-# Initialize T
-iterations = 1000000
-T = 1000
-N = 0.95
-# Loop
+dorm.quickswapOne()
+executionTime = (time.time() - startTime)
+print("Execution time:", str(np.round(executionTime, 3)), "seconds \n")
 
-for i in range(iterations):
+#%%
+startTime = time.time()
+dorm.swapOne()
+executionTime = (time.time() - startTime)
+print("Execution time:", str(np.round(executionTime, 3)), "seconds \n")
+
+#%%
+startTime = time.time()
+dorm.swapTwo()
+executionTime = (time.time() - startTime)
+print("Execution time:", str(np.round(executionTime, 3)), "seconds \n")
+
+#%%
+dorm = Dorm(data, 50)
+dorm.assignRooms()
+startTime = time.time()
+# Initialize T
+iterations = 2000000
+T = 1000
+N = 0.9
+# Loop
+i = 0
+
+#%%
+
+    
+
+while True:    
     
     # Assuming some parameter N characterizing the size of the problem (people to
     # assign to rooms) reduce T according to some schedule, every 10N successful
@@ -356,11 +480,17 @@ for i in range(iterations):
         dorm.swapOne()
     else:
         dorm.swapTwo()
-        
+    
+    if (i % 100000 == 0):
+        print(i)
+    
+    i += 1
 
 executionTime = (time.time() - startTime)
-print("Execution time:", str(np.round(executionTime, 3)), "seconds \n",
-      "Iterations:", i)
+print("Execution time:", str(np.round(executionTime, 3)), "seconds \n")
+    
+# print("Execution time:", str(np.round(executionTime, 3)), "seconds \n",
+#       "Iterations:", i)
 # Assuming some parameter N characterizing the size of the problem (people to
 # assign to rooms) reduce T according to some schedule, every 10N successful
 # changes or 100N attempted changes.
