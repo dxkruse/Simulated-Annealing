@@ -449,7 +449,7 @@ startTime = time.time()
 # Initialize T
 iterations = 2000000
 T = 1000
-N = 0.9
+N = 0.8
 # Loop
     
 i = 0
@@ -495,3 +495,12 @@ print("Execution time:", str(np.round(executionTime, 3)), "seconds \n")
 # Does NOT guarantee global optimum. Improvements:
 #   Slower cooling, to allow more thorogh exploration
 #   Multiple runs with random restarts, take best found of various attempts
+
+#%%
+
+bestScore = min(dorm.rooms.room_score)
+worstScore = max(dorm.rooms.room_score)
+avgScore = np.mean(dorm.rooms.room_score)
+assignments = dorm.rooms.students.values
+
+string = 'Cooling Schedule:' + str(N) + '\n' + 'Initial Temperature:' + str(1000) + '\n' + 'Best Score:' + str(bestScore) + '\n' + 'Worst Score:' + str(worstScore) + '\n' + 'Average Score' + str(avgScore) + '\n' + 'Room Assignments:\n' + str(assignments)
