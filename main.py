@@ -8,12 +8,10 @@ Created on Fri Mar 26 17:34:17 2021
 import os.path
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import itertools 
 from copy import deepcopy
 import time
-from numba import vectorize, njit
-import multiprocessing as mp
+
 
           
 # Initialize file path
@@ -165,7 +163,7 @@ class Dorm:
             
             # print("Swapping Student", [student1], "from Room", randomRooms[0],
             #       "with Student", [student2], "from Room", randomRooms[1])
-            print("swapping")
+            #print("swapping")
             self.rooms.loc[randomRooms[0], "students"][randomStudents[0]] = student2
             self.rooms.loc[randomRooms[1], "students"][randomStudents[1]] = student1
 
@@ -194,7 +192,7 @@ class Dorm:
             probability = np.exp(-(net_score/T))
             # print(probability)
             if (np.random.random() <= probability):
-                print("swapping")
+                #print("swapping")
                 # print("Net score higher, swapping Student", [student1], 
                 #       "from Room", randomRooms[0], "with Student", [student2], 
                 #       "from Room", randomRooms[1], "anyway")
@@ -223,7 +221,7 @@ class Dorm:
                 self.totalScore = self.calculateDormScore()
                 #self.totalScore += net_score
             else:
-                print("not swapping")
+                #print("not swapping")
                 self.attemptedSwaps += 1
                 self.consecutiveAttempts += 1
                 # print("No successful changes were made. Consecutive Attempts:", self.consecutiveAttempts)
@@ -363,9 +361,9 @@ class Dorm:
         newScore = self.calculateDormScore()
         #print(newScore)
         netScore = newScore - oldScore
-        print(netScore)
+        #print(netScore)
         if (netScore < 0):
-            print("swapping")
+            #print("swapping")
             # Keep Swap
             self.successfulSwaps += 1
             self.consecutiveAttempts = 0
@@ -376,7 +374,7 @@ class Dorm:
             probability = np.exp(-(netScore/T))
             # print(probability)
             if (np.random.random() > probability):
-                print("swapping back")
+                #print("swapping back")
                 # Revert Swap
                 temp = deepcopy(self.rooms.loc[randomRooms[0], "students"][randomStudents[0]])
                 self.rooms.loc[randomRooms[0], "students"][randomStudents[0]] = self.rooms.loc[randomRooms[1], "students"].values[randomStudents[1]]
@@ -386,40 +384,41 @@ class Dorm:
                 self.consecutiveAttempts += 1
                 self.totalScore = oldScore
             else:
-                print("swapping")
+                ""
+                #print("swapping")
                 
-    # def main(T, N):
-    #     i = 0
-    #     while True:    
+    def main(self, T, N):
+        i=0
+        while True:    
             
-    #         # Assuming some parameter N characterizing the size of the problem (people to
-    #         # assign to rooms) reduce T according to some schedule, every 10N successful
-    #         # changes or 100N attempted changes.
-    #         if (dorm.successfulSwaps % 2000 == 0 or dorm.attemptedSwaps % 20000 == 0):
-    #             T = N*T
+            # Assuming some parameter N characterizing the size of the problem (people to
+            # assign to rooms) reduce T according to some schedule, every 10N successful
+            # changes or 100N attempted changes.
+            if (self.successfulSwaps % 2000 == 0 or self.attemptedSwaps % 20000 == 0):
+                T = N*T
             
-    #         # Repeat until 20,000 attempts without successful change
-    #         if (dorm.consecutiveAttempts >= 20000):
-    #             print("Reached 20,000 attempts without a successful change")
-    #             break
+            # Repeat until 20,000 attempts without successful change
+            if (self.consecutiveAttempts >= 20000):
+                print("Reached 20,000 attempts without a successful change")
+                break
                 
-    #         # Make Random change to current state x; call resulting state y and find
-    #         # score of state E(y).
-    #         # If E(y) < E(x), make the change. Otherwise, make the change anyway with
-    #         # probability np.exp^(-(dE/T))
-    #         change = np.random.randint(0,2)
-    #         if (change == 0):
-    #             dorm.swapOne()
-    #         else:
-    #             dorm.swapTwo()
+            # Make Random change to current state x; call resulting state y and find
+            # score of state E(y).
+            # If E(y) < E(x), make the change. Otherwise, make the change anyway with
+            # probability np.exp^(-(dE/T))
+            change = np.random.randint(0,2)
+            if (change == 0):
+                self.swapOne()
+            else:
+                self.swapTwo()
             
-    #         if (i % 100000 == 0):
-    #             print(i)
+            if (i % 1000 == 0):
+                print(i)
             
-    #         i += 1
+            i += 1
         
-    #     executionTime = (time.time() - startTime)
-    #     print("Execution time:", str(np.round(executionTime, 3)), "seconds \n")
+        executionTime = (time.time() - startTime)
+        print("Execution time:", str(np.round(executionTime, 3)), "seconds \n")
         
 
 
@@ -452,12 +451,8 @@ iterations = 2000000
 T = 1000
 N = 0.9
 # Loop
-i = 0
-
-#%%
-
     
-
+i = 0
 while True:    
     
     # Assuming some parameter N characterizing the size of the problem (people to
@@ -465,7 +460,6 @@ while True:
     # changes or 100N attempted changes.
     if (dorm.successfulSwaps % 2000 == 0 or dorm.attemptedSwaps % 20000 == 0):
         T = N*T
-    
     # Repeat until 20,000 attempts without successful change
     if (dorm.consecutiveAttempts >= 20000):
         print("Reached 20,000 attempts without a successful change")
@@ -481,7 +475,7 @@ while True:
     else:
         dorm.swapTwo()
     
-    if (i % 100000 == 0):
+    if (i % 1000 == 0):
         print(i)
     
     i += 1
