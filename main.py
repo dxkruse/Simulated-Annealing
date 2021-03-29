@@ -475,7 +475,7 @@ while True:
     else:
         dorm.swapTwo()
     
-    if (i % 1000 == 0):
+    if (i % 10000 == 0):
         print(i)
     
     i += 1
@@ -501,6 +501,13 @@ print("Execution time:", str(np.round(executionTime, 3)), "seconds \n")
 bestScore = min(dorm.rooms.room_score)
 worstScore = max(dorm.rooms.room_score)
 avgScore = np.mean(dorm.rooms.room_score)
-assignments = dorm.rooms.students.values
+assignments = dorm.rooms.students
 
 string = 'Cooling Schedule:' + str(N) + '\n' + 'Initial Temperature:' + str(1000) + '\n' + 'Best Score:' + str(bestScore) + '\n' + 'Worst Score:' + str(worstScore) + '\n' + 'Average Score' + str(avgScore) + '\n' + 'Room Assignments:\n' + str(assignments)
+
+filepath = os.path.dirname(__file__)
+filename = os.path.join(filepath, 'Output.txt')
+
+file = open(filename, 'w')
+file.write(string)
+file.close()
